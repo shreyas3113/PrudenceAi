@@ -714,6 +714,14 @@ body {
     /* align-self: flex-start; */
 }
 
+.compare-response-time {
+    color: #888;
+    font-size: 0.85rem;
+    margin-top: 0.5em;
+    text-align: left;
+    padding-left: 0.5em;
+}
+
 .compare-turn-separator {
     border: none;
     border-top: 1px solid #eee;
@@ -1245,6 +1253,10 @@ body.light-mode .compare-response {
     background: #fafafa;
     color: #000;
     border: 1px solid #ccc;
+}
+
+body.light-mode .compare-response-time {
+    color: #6c757d;
 }
 
 body.light-mode .message-content {
