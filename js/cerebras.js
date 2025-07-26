@@ -88,9 +88,11 @@ class CerebrasAPI {
                     return {
                         success: true,
                         text: responseText,
-                        model: this.model,
+                        model: requestPayload.model, // Use the model from the request payload
                         endpoint: endpoint,
-                        usage: data.usage || null
+                        usage: data.usage || null,
+                        id: data.id || `cmpl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                        finish_reason: data.choices && data.choices[0] ? data.choices[0].finish_reason || 'stop' : 'stop'
                     };
                 }
             } catch (error) {
@@ -177,8 +179,11 @@ class CerebrasAPI {
             return {
                 success: true,
                 text: responseText,
-                model: this.model,
-                usage: data.usage || null
+                model: modelName, // Use the actual selected model name
+                usage: data.usage || null,
+                id: data.id || `cmpl-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                finish_reason: data.choices && data.choices[0] ? data.choices[0].finish_reason || 'stop' : 'stop',
+                endpoint: this.apiEndpoint
             };
 
         } catch (error) {
