@@ -682,13 +682,25 @@ class ChatInterface {
 
                 // Build usage/parameter HTML
                 const temperatureUsed = this.modelTemperatures[botId] !== undefined ? this.modelTemperatures[botId] : 0.7;
-                let temperatureHtml = `<div class="parameter-highlight">
-                    <span class="parameter-label">Temperature Used:</span>
-                    <span class="parameter-value">${temperatureUsed}</span>
-                </div>`;
                 let usageHtml = '';
+                usageHtml = '<div class="response-usage"><strong>Parameters:</strong><br>';
+                
+                // Add temperature as the first parameter
+                usageHtml += `<span>temperature_used: ${temperatureUsed}</span><br>`;
+                
+                // Add response time
+                usageHtml += `<span>response_time_ms: ${responseTime}</span><br>`;
+                
+                // Add model name
+                if (cerebrasResult.model) {
+                    usageHtml += `<span>model: ${cerebrasResult.model}</span><br>`;
+                }
+                
+                // Add endpoint (from API configuration)
+                usageHtml += `<span>endpoint: ${cerebrasAPI.apiEndpoint}</span><br>`;
+                
+                // Add usage parameters from API response
                 if (cerebrasResult.usage) {
-                    usageHtml = '<div class="response-usage"><strong>Parameters:</strong><br>';
                     for (const [key, value] of Object.entries(cerebrasResult.usage)) {
                         if (key === 'prompt_tokens_details') continue; // Skip this parameter
                         let displayValue = value;
@@ -697,19 +709,29 @@ class ChatInterface {
                         }
                         usageHtml += `<span>${key}: ${displayValue}</span><br>`;
                     }
-                    usageHtml += '</div>';
                 }
-                // Optionally, display other top-level parameters (like id, finish_reason, etc.)
-                let otherParamsHtml = '';
-                const skipKeys = ['text', 'usage', 'model', 'success']; // don't repeat these
+                
+                // Add other top-level parameters (like id, finish_reason, etc.)
+                const skipKeys = ['text', 'usage', 'success']; // don't repeat these
                 for (const [key, value] of Object.entries(cerebrasResult)) {
                     if (!skipKeys.includes(key)) {
-                        otherParamsHtml += `<div class="response-param"><strong>${key}:</strong> ${typeof value === 'object' ? JSON.stringify(value) : value}</div>`;
+                        let displayValue = value;
+                        if (typeof value === 'object') {
+                            displayValue = `<pre style="display:inline;white-space:pre-wrap;">${JSON.stringify(value, null, 2)}</pre>`;
+                        }
+                        usageHtml += `<span>${key}: ${displayValue}</span><br>`;
                     }
                 }
-                let timeHtml = `<div class="response-time">Time: ${responseTime} ms</div>`;
+                
+                usageHtml += '</div>';
 
-                responseDiv.querySelector('.compare-response-content').innerHTML = formattedResponse + temperatureHtml + usageHtml + otherParamsHtml + timeHtml;
+                // Get current timestamp for the bot response
+                const botResponseTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                
+                // Create timestamp HTML to be placed above temperature
+                const timestampHtml = `<div class="compare-response-time">${botResponseTime}</div>`;
+                
+                responseDiv.querySelector('.compare-response-content').innerHTML = formattedResponse + timestampHtml + usageHtml;
 
                 // Highlight code blocks if highlight.js is available
                 if (window.hljs) {
@@ -1098,6 +1120,9 @@ class ChatInterface {
         bots.forEach(botMsg => {
             const botDiv = document.createElement('div');
             botDiv.className = 'compare-response';
+            // Get timestamp for bot response
+            const botResponseTime = new Date(botMsg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            
             botDiv.innerHTML = `
                 <div class="compare-response-header">
                     <div class="compare-response-icon">${renderModelIcon(botMsg.botId ? this.aiModels[botMsg.botId].icon : '🤖')}</div>
@@ -1108,6 +1133,7 @@ class ChatInterface {
                 </div>
                 <div class="compare-response-content">
                     ${this.formatAnswer(botMsg.content)}
+                    <div class="compare-response-time">${botResponseTime}</div>
                 </div>
             `;
             // Add expand button logic
@@ -1164,39 +1190,6 @@ class ChatInterface {
                 <div class="carousel-bot-name">${model.name}</div>
             `;
 
-            // Show slider on hover for selected cards only, with 1s delay before hiding
-            let sliderHideTimeout = null;
-            const chatInterface = this; // reference to your ChatInterface instance
-
-            botCard.addEventListener('mouseenter', function () {
-                clearTimeout(sliderHideTimeout);
-                const botId = botCard.dataset.bot;
-                const temp = chatInterface.modelTemperatures && chatInterface.modelTemperatures[botId] !== undefined
-                    ? chatInterface.modelTemperatures[botId]
-                    : 0.7;
-                showFloatingSlider(botCard, botId, temp, chatInterface);
-            });
-            botCard.addEventListener('mouseleave', function () {
-                sliderHideTimeout = setTimeout(() => {
-                    document.getElementById('floating-temp-slider').style.display = 'none';
-                }, 700);
-            });
-
-            // Also keep the slider visible if the mouse enters the slider itself
-            const floatingSlider = document.getElementById('floating-temp-slider');
-            if (floatingSlider) {
-                floatingSlider.addEventListener('mouseenter', () => {
-                    clearTimeout(sliderHideTimeout);
-                    floatingSlider.style.opacity = '1';
-                });
-                floatingSlider.addEventListener('mouseleave', () => {
-                    sliderHideTimeout = setTimeout(() => {
-                        floatingSlider.style.opacity = '0';
-                        floatingSlider.style.display = 'none';
-                    }, 1000);
-                });
-            }
-
             // Temperature slider logic
             const slider = botCard.querySelector('.temperature-slider');
             const valueSpan = botCard.querySelector('.temperature-value');
@@ -1222,12 +1215,14 @@ class ChatInterface {
 
         this.updateCarouselSelection();
 
-        let sliderHideTimeout = null;
-        const chatInterface = this; // reference to your ChatInterface instance
+        // Global slider hide timeout for better hover handling
+        let globalSliderHideTimeout = null;
+        const chatInterface = this;
 
+        // Add hover events to selected cards with improved logic
         document.querySelectorAll('.carousel-bot-card.selected').forEach(card => {
             card.addEventListener('mouseenter', function () {
-                clearTimeout(sliderHideTimeout);
+                clearTimeout(globalSliderHideTimeout);
                 const botId = card.dataset.bot;
                 const temp = chatInterface.modelTemperatures && chatInterface.modelTemperatures[botId] !== undefined
                     ? chatInterface.modelTemperatures[botId]
@@ -1235,23 +1230,35 @@ class ChatInterface {
                 showFloatingSlider(card, botId, temp, chatInterface);
             });
             card.addEventListener('mouseleave', function () {
-                sliderHideTimeout = setTimeout(() => {
-                    document.getElementById('floating-temp-slider').style.display = 'none';
-                }, 1000);
+                // Check if mouse is moving to another selected card
+                const relatedTarget = event.relatedTarget;
+                const isMovingToSelectedCard = relatedTarget && 
+                    relatedTarget.classList.contains('carousel-bot-card') && 
+                    relatedTarget.classList.contains('selected');
+                
+                if (!isMovingToSelectedCard) {
+                    globalSliderHideTimeout = setTimeout(() => {
+                        const floatingSlider = document.getElementById('floating-temp-slider');
+                        if (floatingSlider) {
+                            floatingSlider.style.display = 'none';
+                        }
+                    }, 500); // Reduced delay for better responsiveness
+                }
             });
         });
 
+        // Keep slider visible when hovering over it
         const floatingSlider = document.getElementById('floating-temp-slider');
-        floatingSlider.addEventListener('mouseenter', () => {
-            clearTimeout(sliderHideTimeout);
-            floatingSlider.style.opacity = '1';
-        });
-        floatingSlider.addEventListener('mouseleave', () => {
-            sliderHideTimeout = setTimeout(() => {
-                floatingSlider.style.opacity = '0';
-                floatingSlider.style.display = 'none';
-            }, 1000);
-        });
+        if (floatingSlider) {
+            floatingSlider.addEventListener('mouseenter', () => {
+                clearTimeout(globalSliderHideTimeout);
+            });
+            floatingSlider.addEventListener('mouseleave', () => {
+                globalSliderHideTimeout = setTimeout(() => {
+                    floatingSlider.style.display = 'none';
+                }, 300);
+            });
+        }
     }
 
     updateCarouselSelection() {
