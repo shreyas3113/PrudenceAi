@@ -32,8 +32,8 @@
                 <button class="auth-btn signup-btn">Signup</button>
                 <button class="auth-btn logout-btn" style="display: none;">Logout</button>
                 <button class="auth-btn settings-btn">Settings</button>
-
             </div>
+            <button id="loadJsonBtn" style="margin: 1em auto; display: block; width: 90%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; border-radius: 1em; padding: 0.7em 1.2em; font-size: 1em; cursor: pointer; transition: background 0.2s;">Load JSON File</button>
         </div>
 
         <div class="main-chat">
@@ -103,6 +103,7 @@
                 <div class="carousel-header">
                     <h3>Quick Select AI Models (select upto 3)</h3>
                 </div>
+                
                 <div class="carousel-wrapper">
                     <button class="carousel-btn" id="carouselPrev">‹</button>
                     <div class="carousel-track" id="carouselTrack">
@@ -116,6 +117,7 @@
 
     <!-- Auth Modal -->
     <div id="authModal" class="modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+        
         <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 300px; color: black;">
             <h2 id="modalTitle">Login</h2>
             <input type="text" id="modalEmail" placeholder="Email" style="width: 100%; padding: 10px; margin: 10px 0; border: 1px solid #ddd; border-radius: 5px;">
@@ -138,5 +140,14 @@
     <!-- Markdown parser (marked.js) for Markdown support in chat responses -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script type="module" src="js/script.js"></script>
+    <div id="jsonModal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:2000; align-items:center; justify-content:center;">
+      <div style="background:#fff; color:#222; border-radius:1.5rem; max-width:700px; width:90vw; max-height:90vh; overflow:auto; position:relative; box-shadow:0 8px 32px rgba(0,0,0,0.25); padding:2rem;">
+        <button id="closeJsonModal" style="position:absolute; top:1rem; right:1rem; background:transparent; border:none; font-size:1.5rem; cursor:pointer; color:#888;">&times;</button>
+        <pre id="jsonModalContent" style="font-family:monospace; font-size:1em; background:#f4f4f4; border-radius:8px; padding:1em;"></pre>
+      </div>
+    </div>
+    <div id="floating-temp-slider" style="display:none; position:fixed; z-index:99999; background:#fff; color:#222; border-radius:0.7em; box-shadow:0 2px 8px rgba(0,0,0,0.12); padding:0.5em 1em; min-width:180px; text-align:center; border:1px solid #ddd;">
+    <!-- Slider will be rendered here by JS -->
+</div>
 </body>
 </html>
