@@ -488,12 +488,6 @@ class ChatInterface {
                     <div class="carousel-bot-icon">${renderModelIcon(model.icon)}</div>
                     <div class="carousel-bot-name">${model.name}</div>
                     <div class="bot-description">${model.description}</div>
-                    <div class="bot-temp-slider" style="display:none;">
-                        <label style="font-size:0.95em;">Temperature:
-                            <input type="range" min="0" max="1.5" step="0.01" value="${temp}" class="temperature-slider" data-botid="${botId}">
-                            <span class="temperature-value">${temp}</span>
-                        </label>
-                    </div>
                 `;
                 botsGrid.appendChild(card);
 
@@ -1168,44 +1162,38 @@ class ChatInterface {
             botCard.innerHTML = `
                 <div class="carousel-bot-icon">${renderModelIcon(model.icon)}</div>
                 <div class="carousel-bot-name">${model.name}</div>
-                <div class="bot-temp-slider" style="display:none;">
-                    <label style="font-size:0.95em;">Temperature:
-                        <input type="range" min="0" max="1" step="0.01" value="${temp}" class="temperature-slider" data-botid="${botId}">
-                        <span class="temperature-value">${temp}</span>
-                    </label>
-                </div>
             `;
 
             // Show slider on hover for selected cards only, with 1s delay before hiding
-            let hideSliderTimeout = null;
-            botCard.addEventListener('mouseenter', () => {
-                if (botCard.classList.contains('selected')) {
-                    const sliderDiv = botCard.querySelector('.bot-temp-slider');
-                    if (sliderDiv) {
-                        clearTimeout(hideSliderTimeout);
-                        sliderDiv.style.display = 'block';
-                    }
-                }
+            let sliderHideTimeout = null;
+            const chatInterface = this; // reference to your ChatInterface instance
+
+            botCard.addEventListener('mouseenter', function () {
+                clearTimeout(sliderHideTimeout);
+                const botId = botCard.dataset.bot;
+                const temp = chatInterface.modelTemperatures && chatInterface.modelTemperatures[botId] !== undefined
+                    ? chatInterface.modelTemperatures[botId]
+                    : 0.7;
+                showFloatingSlider(botCard, botId, temp, chatInterface);
             });
-            botCard.addEventListener('mouseleave', () => {
-                const sliderDiv = botCard.querySelector('.bot-temp-slider');
-                if (sliderDiv) {
-                    hideSliderTimeout = setTimeout(() => {
-                        sliderDiv.style.display = 'none';
-                    }, 90); // 1 second delay
-                }
+            botCard.addEventListener('mouseleave', function () {
+                sliderHideTimeout = setTimeout(() => {
+                    document.getElementById('floating-temp-slider').style.display = 'none';
+                }, 700);
             });
+
             // Also keep the slider visible if the mouse enters the slider itself
-            const sliderDiv = botCard.querySelector('.bot-temp-slider');
-            if (sliderDiv) {
-                sliderDiv.addEventListener('mouseenter', () => {
-                    clearTimeout(hideSliderTimeout);
-                    sliderDiv.style.display = 'block';
+            const floatingSlider = document.getElementById('floating-temp-slider');
+            if (floatingSlider) {
+                floatingSlider.addEventListener('mouseenter', () => {
+                    clearTimeout(sliderHideTimeout);
+                    floatingSlider.style.opacity = '1';
                 });
-                sliderDiv.addEventListener('mouseleave', () => {
-                    hideSliderTimeout = setTimeout(() => {
-                        sliderDiv.style.display = 'none';
-                    }, 1000); // 1 second delay
+                floatingSlider.addEventListener('mouseleave', () => {
+                    sliderHideTimeout = setTimeout(() => {
+                        floatingSlider.style.opacity = '0';
+                        floatingSlider.style.display = 'none';
+                    }, 1000);
                 });
             }
 
@@ -1219,13 +1207,13 @@ class ChatInterface {
                     valueSpan.textContent = val;
                 });
                 // Prevent slider interaction from toggling bot selection
-                slider.addEventListener('mousedown', (e) => { e.stopPropagation(); });
-                slider.addEventListener('click', (e) => { e.stopPropagation(); });
+                slider.addEventListener('mousedown', (e) => e.stopPropagation());
+                slider.addEventListener('click', (e) => e.stopPropagation());
             }
             const label = botCard.querySelector('.bot-temp-slider label');
             if (label) {
-                label.addEventListener('mousedown', (e) => { e.stopPropagation(); });
-                label.addEventListener('click', (e) => { e.stopPropagation(); });
+                label.addEventListener('mousedown', (e) => e.stopPropagation());
+                label.addEventListener('click', (e) => e.stopPropagation());
             }
 
             botCard.addEventListener('click', () => this.toggleBotSelection(botId));
@@ -1233,6 +1221,37 @@ class ChatInterface {
         });
 
         this.updateCarouselSelection();
+
+        let sliderHideTimeout = null;
+        const chatInterface = this; // reference to your ChatInterface instance
+
+        document.querySelectorAll('.carousel-bot-card.selected').forEach(card => {
+            card.addEventListener('mouseenter', function () {
+                clearTimeout(sliderHideTimeout);
+                const botId = card.dataset.bot;
+                const temp = chatInterface.modelTemperatures && chatInterface.modelTemperatures[botId] !== undefined
+                    ? chatInterface.modelTemperatures[botId]
+                    : 0.7;
+                showFloatingSlider(card, botId, temp, chatInterface);
+            });
+            card.addEventListener('mouseleave', function () {
+                sliderHideTimeout = setTimeout(() => {
+                    document.getElementById('floating-temp-slider').style.display = 'none';
+                }, 1000);
+            });
+        });
+
+        const floatingSlider = document.getElementById('floating-temp-slider');
+        floatingSlider.addEventListener('mouseenter', () => {
+            clearTimeout(sliderHideTimeout);
+            floatingSlider.style.opacity = '1';
+        });
+        floatingSlider.addEventListener('mouseleave', () => {
+            sliderHideTimeout = setTimeout(() => {
+                floatingSlider.style.opacity = '0';
+                floatingSlider.style.display = 'none';
+            }, 1000);
+        });
     }
 
     updateCarouselSelection() {
@@ -1315,6 +1334,114 @@ function renderModelIcon(icon) {
         return icon;
     }
 }
+
+function showFloatingSlider(card, botId, temp, chatInterface) {
+    const floatingSlider = document.getElementById('floating-temp-slider');
+    floatingSlider.innerHTML = `
+        <label style="font-size:0.95em;">Temperature:
+            <input type="range" min="0" max="1" step="0.01" value="${temp}" class="temperature-slider" data-botid="${botId}">
+            <span class="temperature-value">${temp}</span>
+        </label>
+    `;
+    // Position the slider above the card
+    const rect = card.getBoundingClientRect();
+    floatingSlider.style.left = (rect.left + rect.width / 2 - 90) + 'px';
+    floatingSlider.style.top = (rect.top - floatingSlider.offsetHeight - 10) + 'px';
+    floatingSlider.style.display = 'block';
+    floatingSlider.style.opacity = '1';
+
+    // Slider logic
+    const slider = floatingSlider.querySelector('.temperature-slider');
+    const valueSpan = floatingSlider.querySelector('.temperature-value');
+    if (slider && valueSpan) {
+        slider.addEventListener('input', (e) => {
+            const val = parseFloat(slider.value);
+            chatInterface.modelTemperatures[botId] = val;
+            valueSpan.textContent = val;
+        });
+        slider.addEventListener('mousedown', (e) => e.stopPropagation());
+        slider.addEventListener('click', (e) => e.stopPropagation());
+    }
+}
+
+// Pretty JSON viewer function
+function renderJsonAsHtml(obj, indent = 0) {
+    let html = '';
+    if (Array.isArray(obj)) {
+        html += '[<br>';
+        obj.forEach((item, idx) => {
+            html += '&nbsp;'.repeat(indent + 2) + renderJsonAsHtml(item, indent + 2) + (idx < obj.length - 1 ? ',' : '') + '<br>';
+        });
+        html += '&nbsp;'.repeat(indent) + ']';
+    } else if (typeof obj === 'object' && obj !== null) {
+        html += '{<br>';
+        Object.entries(obj).forEach(([key, value], idx, arr) => {
+            html += '&nbsp;'.repeat(indent + 2) + `<span style="color:#20603d;font-weight:bold;">"${key}"</span>: ` + renderJsonAsHtml(value, indent + 2) + (idx < arr.length - 1 ? ',' : '') + '<br>';
+        });
+        html += '&nbsp;'.repeat(indent) + '}';
+    } else if (typeof obj === 'string') {
+        html += `<span style="color:#a31515;">"${obj}"</span>`;
+    } else {
+        html += `<span style="color:#1a1a1a;">${obj}</span>`;
+    }
+    return html;
+}
+
+// JSON Viewer and Download functionality
+window.addEventListener('DOMContentLoaded', () => {
+    const showJsonBtn = document.getElementById('showJsonBtn');
+    const downloadJsonBtn = document.getElementById('downloadJsonBtn');
+    const jsonViewer = document.getElementById('jsonViewer');
+    // Add a button to load the JSON file
+    let loadJsonBtn = document.getElementById('loadJsonBtn');
+    if (!loadJsonBtn) {
+        loadJsonBtn = document.createElement('button');
+        loadJsonBtn.id = 'loadJsonBtn';
+        loadJsonBtn.textContent = 'Load JSON File';
+        showJsonBtn && showJsonBtn.parentNode.insertBefore(loadJsonBtn, showJsonBtn.nextSibling);
+    }
+    // Use window.chatInterface.messages for the current chat
+    showJsonBtn && showJsonBtn.addEventListener('click', function() {
+        if (jsonViewer.style.display === 'none') {
+            jsonViewer.style.display = 'block';
+            jsonViewer.innerHTML = renderJsonAsHtml(window.chatInterface.messages);
+        } else {
+            jsonViewer.style.display = 'none';
+        }
+    });
+    downloadJsonBtn && downloadJsonBtn.addEventListener('click', function() {
+        const data = JSON.stringify(window.chatInterface.messages, null, 2);
+        const blob = new Blob([data], {type: "application/json"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'chat.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
+    // Load JSON file and display it
+    const jsonModal = document.getElementById('jsonModal');
+    const jsonModalContent = document.getElementById('jsonModalContent');
+    const closeJsonModal = document.getElementById('closeJsonModal');
+
+    loadJsonBtn && loadJsonBtn.addEventListener('click', function() {
+        fetch('sample-chat.json')
+            .then(response => response.json())
+            .then(data => {
+                jsonModal.style.display = 'flex';
+                jsonModalContent.textContent = JSON.stringify(data, null, 2);
+            })
+            .catch(err => {
+                jsonModal.style.display = 'flex';
+                jsonModalContent.textContent = 'Failed to load sample-chat.json';
+            });
+    });
+    closeJsonModal && closeJsonModal.addEventListener('click', function() {
+        jsonModal.style.display = 'none';
+    });
+});
 
 document.addEventListener('DOMContentLoaded', () => {
     new ChatInterface();
