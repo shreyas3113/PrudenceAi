@@ -631,10 +631,7 @@ body {
     display: none;
 }
 
-.carousel-track,
-.carousel-wrapper {
-    overflow: visible !important;
-}
+
 
 .carousel-bot-card .bot-temp-slider {
     margin-top: 0.5em;
